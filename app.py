@@ -122,7 +122,7 @@ def parse_json_response(raw_text):
     except json.JSONDecodeError as e:
         raise ValueError(f"AI 返回的数据格式无法解析为 JSON: {str(e)}\nRaw output: {raw_text[:200]}...")
 
-def call_gemini(api_key, system_prompt, images, text, model_name="gemini-1.5-pro"):
+def call_gemini(api_key, system_prompt, images, text, model_name="gemini-3.5-flash"):
     genai.configure(api_key=api_key)
     # Gemini 1.5 Pro is highly multimodal
     model = genai.GenerativeModel(model_name)
@@ -229,7 +229,7 @@ def generate_pdf_report(data):
 # ====================== UI SIDEBAR ======================
 with st.sidebar:
     st.header("⚙️ 配置")
-    api_provider = st.radio("选择 AI 模型", ["Claude 3.5 Sonnet", "Gemini 1.5 Pro"])
+    api_provider = st.radio("选择 AI 模型", ["Claude 3.5 Sonnet", "Gemini 3.5 flash"])
     
     api_key_env = st.secrets.get("CLAUDE_API_KEY") if "Claude" in api_provider else st.secrets.get("GEMINI_API_KEY")
     api_key = st.text_input("输入对应的 API Key", value=api_key_env if api_key_env else "", type="password")
