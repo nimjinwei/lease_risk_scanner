@@ -122,7 +122,7 @@ def parse_json_response(raw_text):
     except json.JSONDecodeError as e:
         raise ValueError(f"AI 返回的数据格式无法解析为 JSON: {str(e)}\nRaw output: {raw_text[:200]}...")
 
-def call_gemini(api_key, system_prompt, images, text, model_name="gemini-3.5-flash"):
+def call_gemini(api_key, system_prompt, images, text, model_name="gemini-1.5-pro"):
     genai.configure(api_key=api_key)
     # Gemini 1.5 Pro is highly multimodal
     model = genai.GenerativeModel(model_name)
@@ -130,10 +130,9 @@ def call_gemini(api_key, system_prompt, images, text, model_name="gemini-3.5-fla
     contents = [system_prompt]
     if images:
         for img in images:
-            # Decode base64 back to bytes for google SDK
             img_bytes = base64.b64decode(img["data"])
-            img_obj = {"mime_type": img["media_type"], "data": img_bytes}
-            contents.append(img_obj)
+            pil_img = Image.open(io.BytesIO(img_bytes))
+            contents.append(pil_img)
     if text:
         contents.append(text)
         
@@ -183,25 +182,37 @@ def call_claude(api_key, system_prompt, images, text, model_name="claude-3-5-son
 
 # PDF Generation
 class PDFReport(FPDF):
+    def __init__(self):
+        super().__init__()
+        font_path = "SimHei.ttf"
+        if not os.path.exists(font_path):
+            import urllib.request
+            try:
+                urllib.request.urlretrieve('https://github.com/StellarCN/scp_zh/raw/master/fonts/SimHei.ttf', font_path)
+            except Exception:
+                pass
+        
+        if os.path.exists(font_path):
+            self.add_font("SimHei", "", font_path)
+            self.default_font = "SimHei"
+        else:
+            self.default_font = "Arial"
+
     def header(self):
-        self.set_font('Arial', 'B', 15)
-        self.cell(0, 10, 'Lease Risk Analysis Report', 0, 1, 'C')
+        self.set_font(self.default_font, '', 15)
+        self.cell(0, 10, 'Lease Risk Analysis Report / 租约风险分析报告', 0, 1, 'C')
         self.ln(5)
 
     def chapter_title(self, title):
-        self.set_font('Arial', 'B', 12)
+        self.set_font(self.default_font, '', 12)
         self.set_fill_color(200, 220, 255)
         self.cell(0, 10, title, 0, 1, 'L', 1)
         self.ln(4)
 
     def chapter_body(self, body):
-        self.set_font('Arial', '', 11)
-        # Using multi_cell for text wrap. 
-        # Note: Standard FPDF doesn't support CJK fonts natively without adding a unicode font.
-        # For simplicity in this demo, we'll output english or basic text, but we should handle unicode.
-        # To make it robust, we replace non-latin chars with ? or require a TTF font.
-        # Since this is a lightweight solution, we'll try to output utf-8 safely.
-        body = body.encode('latin-1', 'replace').decode('latin-1')
+        self.set_font(self.default_font, '', 11)
+        if self.default_font == "Arial":
+            body = body.encode('latin-1', 'replace').decode('latin-1')
         self.multi_cell(0, 10, body)
         self.ln()
 
